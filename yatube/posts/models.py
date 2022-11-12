@@ -1,6 +1,5 @@
 from django.db import models
 from django.contrib.auth import get_user_model
-from django.conf import settings
 
 User = get_user_model()
 
@@ -26,6 +25,10 @@ class Group(models.Model):
 
 
 class Post(models.Model):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.SYMBOLS_IN_STR = 15
+
     text = models.TextField(
         verbose_name='Текст Поста',
         help_text='Введите текст Поста'
@@ -53,7 +56,7 @@ class Post(models.Model):
     )
 
     def __str__(self):
-        return self.text[:settings.SYMBOLS_IN_STR]
+        return self.text[self.SYMBOLS_IN_STR]
 
     class Meta:
         ordering = ('-pub_date',)

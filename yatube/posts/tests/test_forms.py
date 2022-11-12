@@ -6,7 +6,6 @@ from django.conf import settings
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
-from posts.forms import PostForm
 from posts.models import Group, Post
 
 
@@ -27,11 +26,10 @@ class TaskCreateFormTests(TestCase):
             description='тестовое описание группы'
         )
         cls.post = Post.objects.create(
-            text='тестовый текст',
+            text='Тестовый текст',
             author=cls.user,
             group=cls.group,
         )
-        cls.form = PostForm()
 
     @classmethod
     def tearDownClass(cls):
@@ -39,7 +37,6 @@ class TaskCreateFormTests(TestCase):
         shutil.rmtree(TEMP_MEDIA_ROOT, ignore_errors=True)
 
     def setUp(self):
-        self.guest_client = Client()
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
 
@@ -48,6 +45,7 @@ class TaskCreateFormTests(TestCase):
         '''Проверка создания нового поста'''
         form_data = {
             'text': 'Тестовый текст',
+            'author': self.user,
             'group': self.group.id,
         }
         response = self.authorized_client.post(
@@ -58,17 +56,21 @@ class TaskCreateFormTests(TestCase):
         self.assertRedirects(
             response,
             reverse('posts:profile', kwargs={'username': self.user.username}))
-        self.assertTrue(
-            Post.objects.filter(
-                text='Тестовый текст',
-                group=self.group.id,
-            ).exists()
-        )
+        for field in form_data:
+            if field == 'group':
+                self.assertEqual(
+                    form_data[field],
+                    response.context['post'].group.id)
+            else:
+                self.assertEqual(
+                    form_data[field], getattr(response.context['post'], field)
+                )
 
     # Проверка редактирования поста
     def test_edit_post(self):
         form_data = {
             'text': 'Тестовый текст',
+            'author': self.user,
             'group': self.group.id,
         }
         response = self.authorized_client.post(
@@ -79,23 +81,12 @@ class TaskCreateFormTests(TestCase):
         self.assertRedirects(
             response,
             reverse('posts:post_detail', kwargs={'post_id': self.post.id}))
-        self.assertTrue(
-            Post.objects.filter(
-                text='Тестовый текст',
-                group=self.group.id,
-            ).exists()
-        )
-
-    # Проверки валидации формы
-    def check_form_errors(self, form_data, error_text):
-        form = PostForm(data=form_data)
-        self.assertFalse(form.is_valid())
-        self.assertEqual(form.errors['text'], [error_text])
-
-    # Проверка валидации формы на пустой текст
-    def test_create_post_with_empty_text(self):
-        form_data = {
-            'text': '',
-            'group': self.group.id,
-        }
-        self.check_form_errors(form_data, 'Обязательное поле.')
+        for field in form_data:
+            if field == 'group':
+                self.assertEqual(
+                    form_data[field],
+                    response.context['post'].group.id)
+            else:
+                self.assertEqual(
+                    form_data[field], getattr(response.context['post'], field)
+                )

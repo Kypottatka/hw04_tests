@@ -1,10 +1,10 @@
-from django import forms
 from django.contrib.auth import get_user_model
 from django.test import Client, TestCase
 from django.urls import reverse
 from django.conf import settings
 
 from posts.models import Group, Post
+from posts.forms import PostForm
 
 User = get_user_model()
 
@@ -31,34 +31,6 @@ class PostPagesTests(TestCase):
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
 
-    # Проверка, что страницы используют правильные шаблоны
-    def test_pages_uses_correct_template(self):
-        templates_pages_names = {
-            reverse('posts:index'): 'posts/index.html',
-            reverse(
-                'posts:group_list',
-                kwargs={'slug': self.group.slug},
-            ): 'posts/group_list.html',
-            reverse(
-                'posts:profile',
-                kwargs={'username': self.user.username},
-            ): 'posts/profile.html',
-            reverse('posts:post_create'): 'posts/create_post.html',
-            reverse(
-                'posts:post_detail',
-                kwargs={'post_id': self.post.id},
-            ): 'posts/post_detail.html',
-            reverse(
-                'posts:post_edit',
-                kwargs={'post_id': self.post.id},
-            ): 'posts/create_post.html',
-        }
-
-        for reverse_name, template in templates_pages_names.items():
-            with self.subTest(reverse_name=reverse_name):
-                response = self.authorized_client.get(reverse_name)
-                self.assertTemplateUsed(response, template)
-
     # Проверка, что страницы передают правильный контекст
     def test_pages_shows_correct_context(self):
         url_list = (
@@ -69,18 +41,19 @@ class PostPagesTests(TestCase):
             reverse(
                 'posts:index'
             ),
+            reverse(
+                'posts:profile',
+                kwargs={'username': self.user.username},
+            )
         )
 
         for url in url_list:
             with self.subTest(url=url):
                 response = self.authorized_client.get(url)
                 first_object = response.context['page_obj'][0]
-                post_text_0 = first_object.text
-                post_author_0 = first_object.author
-                post_group_0 = first_object.group
-                self.assertEqual(post_text_0, self.post.text)
-                self.assertEqual(post_author_0, self.post.author)
-                self.assertEqual(post_group_0, self.post.group)
+                self.assertEqual(first_object.text, self.post.text)
+                self.assertEqual(first_object.author, self.post.author)
+                self.assertEqual(first_object.group, self.post.group)
 
     # Проверка, что страница post_detail передает правильный контекст
     def test_post_detail_page_show_correct_context(self):
@@ -91,18 +64,53 @@ class PostPagesTests(TestCase):
         response = self.authorized_client.get(url)
         self.assertEqual(response.context['post'], self.post)
 
-    # Проверка, что страница post_create передает правильный контекст
+        with self.subTest(url=url):
+            response = self.authorized_client.get(url)
+            post_object = response.context['post']
+            self.assertEqual(post_object.text, self.post.text)
+            self.assertEqual(post_object.author, self.post.author)
+            self.assertEqual(post_object.group, self.post.group)
+
+    # Проверка, что страницы передают правильный контекст
     def test_post_create_page_show_correct_context(self):
-        url = reverse('posts:post_create')
+        url_list = (
+            reverse('posts:post_create'),
+            reverse('posts:post_edit', kwargs={'post_id': self.post.id}),
+        )
+        for url in url_list:
+            with self.subTest(url=url):
+                response = self.authorized_client.get(url)
+                self.assertIsInstance(response.context['form'], PostForm)
+
+    def test_author_page_show_correct_context(self):
+        url = reverse(
+            'posts:profile',
+            kwargs={'username': self.user.username},
+        )
         response = self.authorized_client.get(url)
-        form_fields = {
-            'text': forms.fields.CharField,
-            'group': forms.fields.ChoiceField,
-        }
-        for value, expected in form_fields.items():
-            with self.subTest(value=value):
-                form_field = response.context['form'].fields[value]
-                self.assertIsInstance(form_field, expected)
+        self.assertEqual(response.context['author'], self.user)
+
+    def test_group_page_show_correct_context(self):
+        url = reverse(
+            'posts:group_list',
+            kwargs={'slug': self.group.slug},
+        )
+        response = self.authorized_client.get(url)
+        self.assertEqual(response.context['group'], self.group)
+
+    # Проверка, что пост с группой не выводится на страницу другой группы
+    def test_post_not_show_on_other_group_page(self):
+        group = Group.objects.create(
+            title='Тестовая группа 2',
+            slug='test-slug-2',
+            description='тестовое описание группы 2'
+        )
+        url = reverse(
+            'posts:group_list',
+            kwargs={'slug': group.slug},
+        )
+        response = self.authorized_client.get(url)
+        self.assertNotContains(response, self.post.text)
 
 
 # Проверяем работоспособность Паджинатора
@@ -117,65 +125,69 @@ class PaginatorViewsTest(TestCase):
             description='тестовое описание группы'
         )
 
-        posts_number = settings.POSTS_ON_PAGE + 3
+        posts_number = 13
 
         cls.posts = Post.objects.bulk_create(
             [
                 Post(
-                    text=f'Тестовые посты номер {n}',
+                    text=f'Тестовые посты номер {post}',
                     author=cls.user,
                     group=cls.group
                 )
-                for n in range(posts_number)
+                for post in range(posts_number)
             ]
         )
 
     def setUp(self):
+        self.posts_number = 13
         self.guest_client = Client()
-        self.authorized_client = Client()
-        self.authorized_client.force_login(self.user)
 
-    def test_first_page_contains_ten_records(self):
-        response = self.authorized_client.get(reverse('posts:index'))
-        self.assertEqual(len(response.context['page_obj']), 10)
-
-    def test_second_page_contains_three_records(self):
-        response = self.authorized_client.get(
-            reverse('posts:index') + '?page=2')
-        self.assertEqual(len(response.context['page_obj']), 3)
-
-    def test_group_list_first_page_contains_ten_records(self):
-        response = self.authorized_client.get(
+    # Проверяем, что страница отображает по 10 постов
+    def test_pages_contain_ten_records(self):
+        url_list = (
+            reverse('posts:index'),
             reverse(
                 'posts:group_list',
                 kwargs={'slug': self.group.slug},
-            )
-        )
-        self.assertEqual(len(response.context['page_obj']), 10)
-
-    def test_group_list_second_page_contains_three_records(self):
-        response = self.authorized_client.get(
-            reverse(
-                'posts:group_list',
-                kwargs={'slug': self.group.slug},
-            ) + '?page=2'
-        )
-        self.assertEqual(len(response.context['page_obj']), 3)
-
-    def test_profile_first_page_contains_ten_records(self):
-        response = self.authorized_client.get(
+            ),
             reverse(
                 'posts:profile',
                 kwargs={'username': self.user.username},
             )
         )
-        self.assertEqual(len(response.context['page_obj']), 10)
 
-    def test_profile_second_page_contains_three_records(self):
-        response = self.authorized_client.get(
+        for url in url_list:
+            with self.subTest(url=url):
+                response = self.guest_client.get(url)
+                self.assertEqual(
+                    len(response.context['page_obj']),
+                    settings.POSTS_ON_PAGE
+                )
+
+    # Проверяем, что "n" страница отображает нужное количество постов
+    def test_n_page_contains_three_records(self):
+        posts_on_n_page = f'''?page={
+            (self.posts_number - 1)
+            // settings.POSTS_ON_PAGE + 1}'''
+        url_list = (
+            reverse('posts:index')
+            + posts_on_n_page,
+            reverse(
+                'posts:group_list',
+                kwargs={'slug': self.group.slug},
+            )
+            + posts_on_n_page,
             reverse(
                 'posts:profile',
                 kwargs={'username': self.user.username},
-            ) + '?page=2'
+            )
+            + posts_on_n_page,
         )
-        self.assertEqual(len(response.context['page_obj']), 3)
+
+        for url in url_list:
+            with self.subTest(url=url):
+                response = self.guest_client.get(url)
+                self.assertEqual(
+                    len(response.context['page_obj']),
+                    self.posts_number - settings.POSTS_ON_PAGE
+                )
