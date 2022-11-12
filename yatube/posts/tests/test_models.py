@@ -24,7 +24,7 @@ class PostModelTest(TestCase):
     def test_models_have_correct_object_names(self):
         """Проверяем, что у моделей корректно работает __str__."""
         posts_data = [
-            (PostModelTest.post.text[self.SYMBOLS_IN_STR],
+            (PostModelTest.post.text[Post.SYMBOLS_IN_STR],
                 str(PostModelTest.post)),
             (PostModelTest.group.title,
                 str(PostModelTest.group)),

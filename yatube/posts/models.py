@@ -25,9 +25,10 @@ class Group(models.Model):
 
 
 class Post(models.Model):
+    SYMBOLS_IN_STR = 15
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.SYMBOLS_IN_STR = 15
 
     text = models.TextField(
         verbose_name='Текст Поста',
