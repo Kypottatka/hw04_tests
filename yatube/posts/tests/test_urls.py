@@ -110,7 +110,8 @@ class PostURLTests(TestCase):
             reverse('posts:post_edit', kwargs={'post_id': self.post.id}),
             follow=True
         )
-        if self.authorized_client == self.user:
+        if self.post.author != self.user:
             self.assertRedirects(
-                response, reverse('posts:index')
+                response,
+                reverse('posts:post_detail', kwargs={'post_id': self.post.id})
             )

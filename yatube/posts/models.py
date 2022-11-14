@@ -55,6 +55,11 @@ class Post(models.Model):
         verbose_name='Группа',
         help_text='Показывает название группы'
     )
+    image = models.ImageField(
+        'Картинка',
+        upload_to='posts/',
+        blank=True
+    )
 
     def __str__(self):
         return self.text[self.SYMBOLS_IN_STR]

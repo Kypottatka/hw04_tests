@@ -87,7 +87,10 @@ def post_edit(request, post_id):
     )
     if post.author != request.user:
         return redirect('posts:index')
-    form = PostForm(request.POST or None, instance=post)
+
+    form = PostForm(request.POST or None,
+                    files=request.FILES or None,
+                    instance=post)
     context = {
         'form': form,
         'is_edit': True,

@@ -45,7 +45,6 @@ class TaskCreateFormTests(TestCase):
         '''Проверка создания нового поста'''
         form_data = {
             'text': 'Тестовый текст',
-            'author': self.user,
             'group': self.group.id,
         }
         response = self.authorized_client.post(
@@ -53,14 +52,22 @@ class TaskCreateFormTests(TestCase):
             data=form_data,
             follow=True
         )
+        post = Post.objects.get(id=1)
+        self.assertTrue(post)
+        self.assertEqual(self.user, post.author)
+        self.assertEqual(self.group.id, post.group.id)
         self.assertRedirects(
             response,
-            reverse('posts:profile', kwargs={'username': self.user.username}))
+            reverse('posts:profile',
+                    kwargs={'username': self.user.username}
+                    )
+        )
+
         for field in form_data:
             if field == 'group':
                 self.assertEqual(
                     form_data[field],
-                    response.context['post'].group.id)
+                    self.group.id)
             else:
                 self.assertEqual(
                     form_data[field], getattr(response.context['post'], field)
@@ -70,7 +77,6 @@ class TaskCreateFormTests(TestCase):
     def test_edit_post(self):
         form_data = {
             'text': 'Тестовый текст',
-            'author': self.user,
             'group': self.group.id,
         }
         response = self.authorized_client.post(
@@ -78,15 +84,20 @@ class TaskCreateFormTests(TestCase):
             data=form_data,
             follow=True
         )
+        post = Post.objects.get(id=1)
+        self.assertTrue(post)
+        self.assertEqual(self.user, post.author)
+        self.assertEqual(self.group.id, post.group.id)
         self.assertRedirects(
             response,
             reverse('posts:post_detail', kwargs={'post_id': self.post.id}))
+
         for field in form_data:
             if field == 'group':
                 self.assertEqual(
                     form_data[field],
-                    response.context['post'].group.id)
+                    post.group.id)
             else:
                 self.assertEqual(
-                    form_data[field], getattr(response.context['post'], field)
+                    form_data[field], post.text
                 )
