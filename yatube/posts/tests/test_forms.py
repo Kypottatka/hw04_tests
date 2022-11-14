@@ -43,6 +43,7 @@ class TaskCreateFormTests(TestCase):
     # Проверка создания поста
     def test_create_post(self):
         '''Проверка создания нового поста'''
+        posts_counter = Post.objects.count()
         form_data = {
             'text': 'Тестовый текст',
             'group': self.group.id,
@@ -52,26 +53,16 @@ class TaskCreateFormTests(TestCase):
             data=form_data,
             follow=True
         )
-        post = Post.objects.get(id=1)
-        self.assertTrue(post)
-        self.assertEqual(self.user, post.author)
-        self.assertEqual(self.group.id, post.group.id)
+        self.assertEqual(self.user, self.post.author)
+        self.assertEqual(form_data['group'], self.post.group.id)
+        self.assertEqual(form_data['text'], self.post.text)
         self.assertRedirects(
             response,
             reverse('posts:profile',
                     kwargs={'username': self.user.username}
                     )
         )
-
-        for field in form_data:
-            if field == 'group':
-                self.assertEqual(
-                    form_data[field],
-                    self.group.id)
-            else:
-                self.assertEqual(
-                    form_data[field], getattr(response.context['post'], field)
-                )
+        self.assertEqual(Post.objects.count(), posts_counter + 1)
 
     # Проверка редактирования поста
     def test_edit_post(self):
@@ -84,20 +75,9 @@ class TaskCreateFormTests(TestCase):
             data=form_data,
             follow=True
         )
-        post = Post.objects.get(id=1)
-        self.assertTrue(post)
-        self.assertEqual(self.user, post.author)
-        self.assertEqual(self.group.id, post.group.id)
+        self.assertEqual(self.user, self.post.author)
+        self.assertEqual(form_data['group'], self.post.group.id)
+        self.assertEqual(form_data['text'], self.post.text)
         self.assertRedirects(
             response,
             reverse('posts:post_detail', kwargs={'post_id': self.post.id}))
-
-        for field in form_data:
-            if field == 'group':
-                self.assertEqual(
-                    form_data[field],
-                    post.group.id)
-            else:
-                self.assertEqual(
-                    form_data[field], post.text
-                )

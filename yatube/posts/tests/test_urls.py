@@ -12,6 +12,7 @@ class PostURLTests(TestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.user = User.objects.create_user(username='auth')
+        cls.user_1 = User.objects.create_user(username='auth_1')
         cls.group = Group.objects.create(
             title='Тестовая группа',
             slug='test-slug',
@@ -28,6 +29,8 @@ class PostURLTests(TestCase):
         self.guest_client = Client()
         self.authorized_client = Client()
         self.authorized_client.force_login(self.user)
+        self.authorized_client_1 = Client()
+        self.authorized_client_1.force_login(self.user_1)
 
     def test_reverse_name(self):
         template_names = {
@@ -106,12 +109,11 @@ class PostURLTests(TestCase):
                 self.assertRedirects(response, f'/auth/login/?next={url}')
 
     def test_edit_page_redirect(self):
-        response = self.authorized_client.get(
+        response = self.authorized_client_1.get(
             reverse('posts:post_edit', kwargs={'post_id': self.post.id}),
             follow=True
         )
-        if self.post.author != self.user:
-            self.assertRedirects(
-                response,
-                reverse('posts:post_detail', kwargs={'post_id': self.post.id})
-            )
+        self.assertRedirects(
+            response,
+            reverse('posts:post_detail', kwargs={'post_id': self.post.id})
+        )

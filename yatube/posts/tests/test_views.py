@@ -14,12 +14,12 @@ class PostPagesTests(TestCase):
     def setUpClass(cls):
         super().setUpClass()
         cls.user = User.objects.create_user(username='auth')
-        cls.group1 = Group.objects.create(
+        cls.group_with_post = Group.objects.create(
             title='Тестовая группа',
             slug='test-slug',
             description='тестовое описание группы'
         )
-        cls.group2 = Group.objects.create(
+        cls.group_without_post = Group.objects.create(
             title='Тестовая группа 2',
             slug='test-slug-2',
             description='тестовое описание группы 2'
@@ -27,7 +27,7 @@ class PostPagesTests(TestCase):
         cls.post = Post.objects.create(
             text='тестовый текст',
             author=cls.user,
-            group=cls.group1,
+            group=cls.group_with_post,
         )
 
     def setUp(self):
@@ -40,7 +40,7 @@ class PostPagesTests(TestCase):
         url_list = (
             reverse(
                 'posts:group_list',
-                kwargs={'slug': self.group1.slug},
+                kwargs={'slug': self.group_with_post.slug},
             ),
             reverse(
                 'posts:index'
@@ -89,25 +89,15 @@ class PostPagesTests(TestCase):
         )
         form_data = {
             'text': 'тестовый текст 2',
-            'group': self.group2.id,
+            'group': self.group_without_post.id,
         }
-        response = self.authorized_client.post(
+        response = self.authorized_client.get(
             url,
             data=form_data,
             follow=True
         )
-        self.assertContains(response, form_data['text'])
-
-    def test_edit_post_page_shows_correct_context(self):
-        url = reverse(
-            'posts:post_edit',
-            kwargs={'post_id': self.post.id},
-        )
-        response = self.authorized_client.get(url)
-        self.assertEqual(response.context['form'].initial['text'],
-                         self.post.text)
-        self.assertEqual(response.context['form'].initial['group'],
-                         self.post.group.id)
+        self.assertNotContains(response, form_data)
+        self.assertIsInstance(response.context['form'], PostForm)
 
     def test_author_page_show_correct_context(self):
         url = reverse(
@@ -120,16 +110,16 @@ class PostPagesTests(TestCase):
     def test_group_page_show_correct_context(self):
         url = reverse(
             'posts:group_list',
-            kwargs={'slug': self.group1.slug},
+            kwargs={'slug': self.group_with_post.slug},
         )
         response = self.authorized_client.get(url)
-        self.assertEqual(response.context['group'], self.group1)
+        self.assertEqual(response.context['group'], self.group_with_post)
 
     # Проверка, что пост с группой не выводится на страницу другой группы
     def test_post_not_show_on_other_group_page(self):
         url = reverse(
             'posts:group_list',
-            kwargs={'slug': self.group2.slug},
+            kwargs={'slug': self.group_without_post.slug},
         )
         response = self.authorized_client.get(url)
         self.assertNotIn(self.post, response.context['page_obj'])
@@ -147,7 +137,7 @@ class PaginatorViewsTest(TestCase):
             description='тестовое описание группы'
         )
 
-        POSTS_NUMBER = 13
+        cls.POSTS_NUMBER = 13
 
         cls.posts = Post.objects.bulk_create(
             [
@@ -156,12 +146,11 @@ class PaginatorViewsTest(TestCase):
                     author=cls.user,
                     group=cls.group
                 )
-                for post in range(POSTS_NUMBER)
+                for post in range(cls.POSTS_NUMBER)
             ]
         )
 
     def setUp(self):
-        self.posts_number = 13
         self.guest_client = Client()
 
     # Проверяем, что страница отображает по 10 постов
@@ -189,7 +178,7 @@ class PaginatorViewsTest(TestCase):
     # Проверяем, что "n" страница отображает нужное количество постов
     def test_n_page_contains_three_records(self):
         posts_on_n_page = f'''?page={
-            (self.posts_number - 1)
+            (self.POSTS_NUMBER - 1)
             // settings.POSTS_ON_PAGE + 1}'''
         url_list = (
             reverse('posts:index')
@@ -211,5 +200,5 @@ class PaginatorViewsTest(TestCase):
                 response = self.guest_client.get(url)
                 self.assertEqual(
                     len(response.context['page_obj']),
-                    self.posts_number % settings.POSTS_ON_PAGE
+                    self.POSTS_NUMBER % settings.POSTS_ON_PAGE
                 )
