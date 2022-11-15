@@ -83,21 +83,8 @@ class PostPagesTests(TestCase):
                 self.assertIsInstance(response.context['form'], PostForm)
 
     def test_edit_post(self):
-        url = reverse(
-            'posts:post_edit',
-            kwargs={'post_id': self.post.id},
-        )
-        form_data = {
-            'text': 'тестовый текст 2',
-            'group': self.group_without_post.id,
-        }
-        response = self.authorized_client.get(
-            url,
-            data=form_data,
-            follow=True
-        )
-        self.assertNotContains(response, form_data)
-        self.assertIsInstance(response.context['form'], PostForm)
+        form = PostForm(instance=self.post)
+        self.assertEqual(form.instance, self.post)
 
     def test_author_page_show_correct_context(self):
         url = reverse(

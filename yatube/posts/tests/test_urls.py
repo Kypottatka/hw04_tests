@@ -11,8 +11,8 @@ class PostURLTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user = User.objects.create_user(username='auth')
-        cls.user_1 = User.objects.create_user(username='auth_1')
+        cls.user_author = User.objects.create_user(username='auth')
+        cls.user_not_author = User.objects.create_user(username='auth_1')
         cls.group = Group.objects.create(
             title='Тестовая группа',
             slug='test-slug',
@@ -21,16 +21,16 @@ class PostURLTests(TestCase):
 
         cls.post = Post.objects.create(
             text='тестовый текст',
-            author=cls.user,
+            author=cls.user_author,
             group=cls.group,
         )
 
     def setUp(self):
         self.guest_client = Client()
-        self.authorized_client = Client()
-        self.authorized_client.force_login(self.user)
-        self.authorized_client_1 = Client()
-        self.authorized_client_1.force_login(self.user_1)
+        self.authorized_client_post_author = Client()
+        self.authorized_client_post_author.force_login(self.user_author)
+        self.authorized_client_not_author = Client()
+        self.authorized_client_not_author.force_login(self.user_not_author)
 
     def test_reverse_name(self):
         template_names = {
@@ -38,8 +38,9 @@ class PostURLTests(TestCase):
                 '/',
             reverse('posts:group_list', kwargs={'slug': self.group.slug}):
                 f'/group/{self.group.slug}/',
-            reverse('posts:profile', kwargs={'username': self.user.username}):
-                f'/profile/{self.user.username}/',
+            reverse('posts:profile',
+                    kwargs={'username': self.user_author.username}):
+                f'/profile/{self.user_author.username}/',
             reverse('posts:post_detail', kwargs={'post_id': self.post.id}):
                 f'/posts/{self.post.id}/',
             reverse('posts:post_create'):
@@ -58,7 +59,8 @@ class PostURLTests(TestCase):
                 200, False),
             (reverse('posts:group_list', kwargs={'slug': self.group.slug}),
                 200, False),
-            (reverse('posts:profile', kwargs={'username': self.user.username}),
+            (reverse('posts:profile',
+                     kwargs={'username': self.user_author.username}),
                 200, False),
             (reverse('posts:post_detail', kwargs={'post_id': self.post.id}),
                 200, False),
@@ -72,7 +74,7 @@ class PostURLTests(TestCase):
         for address, status, auth in template_names:
             with self.subTest(address=address):
                 if auth:
-                    response = self.authorized_client.get(address)
+                    response = self.authorized_client_post_author.get(address)
                 else:
                     response = self.guest_client.get(address)
                 self.assertEqual(response.status_code, status)
@@ -84,7 +86,8 @@ class PostURLTests(TestCase):
                 'posts/index.html',
             reverse('posts:group_list', kwargs={'slug': self.group.slug}):
                 'posts/group_list.html',
-            reverse('posts:profile', kwargs={'username': self.user.username}):
+            reverse('posts:profile',
+                    kwargs={'username': self.user_author.username}):
                 'posts/profile.html',
             reverse('posts:post_create'):
                 'posts/create_post.html',
@@ -95,7 +98,7 @@ class PostURLTests(TestCase):
         }
         for address, template in templates_pages_names.items():
             with self.subTest(address=address):
-                response = self.authorized_client.get(address)
+                response = self.authorized_client_post_author.get(address)
                 self.assertTemplateUsed(response, template)
 
     def test_unauthorized_redirect(self):
@@ -109,7 +112,7 @@ class PostURLTests(TestCase):
                 self.assertRedirects(response, f'/auth/login/?next={url}')
 
     def test_edit_page_redirect(self):
-        response = self.authorized_client_1.get(
+        response = self.authorized_client_not_author.get(
             reverse('posts:post_edit', kwargs={'post_id': self.post.id}),
             follow=True
         )
