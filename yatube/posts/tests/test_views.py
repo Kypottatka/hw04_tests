@@ -186,7 +186,10 @@ class PaginatorViewsTest(TestCase):
             if post_number % settings.POSTS_ON_PAGE == 0 and post_number != 0:
                 return settings.POSTS_ON_PAGE
             else:
-                return post_number % settings.POSTS_ON_PAGE
+                return (post_number
+                        - (settings.POSTS_ON_PAGE
+                            * (post_number // settings.POSTS_ON_PAGE))
+                        )
 
         for url in url_list:
             with self.subTest(url=url):
