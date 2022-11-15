@@ -182,10 +182,16 @@ class PaginatorViewsTest(TestCase):
             + posts_on_n_page,
         )
 
+        def get_n_page_posts_number(post_number):
+            if post_number % settings.POSTS_ON_PAGE == 0 and post_number != 0:
+                return settings.POSTS_ON_PAGE
+            else:
+                return post_number % settings.POSTS_ON_PAGE
+
         for url in url_list:
             with self.subTest(url=url):
                 response = self.guest_client.get(url)
                 self.assertEqual(
                     len(response.context['page_obj']),
-                    self.POSTS_NUMBER % settings.POSTS_ON_PAGE
+                    get_n_page_posts_number(self.POSTS_NUMBER)
                 )
