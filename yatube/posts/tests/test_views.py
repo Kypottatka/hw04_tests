@@ -83,8 +83,12 @@ class PostPagesTests(TestCase):
                 self.assertIsInstance(response.context['form'], PostForm)
 
     def test_edit_post(self):
-        form = PostForm(instance=self.post)
-        self.assertEqual(form.instance, self.post)
+        url = reverse(
+            'posts:post_edit',
+            kwargs={'post_id': self.post.id},
+        )
+        response = self.authorized_client.get(url)
+        self.assertIsInstance(response.context['form'], PostForm)
 
     def test_author_page_show_correct_context(self):
         url = reverse(
@@ -183,13 +187,9 @@ class PaginatorViewsTest(TestCase):
         )
 
         def get_n_page_posts_number(post_number):
-            if post_number % settings.POSTS_ON_PAGE == 0 and post_number != 0:
-                return settings.POSTS_ON_PAGE
-            else:
-                return (post_number
-                        - (settings.POSTS_ON_PAGE
-                            * (post_number // settings.POSTS_ON_PAGE))
-                        )
+            return (post_number
+                    - ((post_number // settings.POSTS_ON_PAGE + 1) - 1)
+                    * settings.POSTS_ON_PAGE)
 
         for url in url_list:
             with self.subTest(url=url):

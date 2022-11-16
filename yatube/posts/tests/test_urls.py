@@ -29,8 +29,6 @@ class PostURLTests(TestCase):
         self.guest_client = Client()
         self.authorized_client_post_author = Client()
         self.authorized_client_post_author.force_login(self.user_author)
-        self.authorized_client_not_author = Client()
-        self.authorized_client_not_author.force_login(self.user_not_author)
 
     def test_reverse_name(self):
         template_names = {
@@ -112,7 +110,8 @@ class PostURLTests(TestCase):
                 self.assertRedirects(response, f'/auth/login/?next={url}')
 
     def test_edit_page_redirect(self):
-        response = self.authorized_client_not_author.get(
+        self.authorized_client_post_author.force_login(self.user_not_author)
+        response = self.authorized_client_post_author.get(
             reverse('posts:post_edit', kwargs={'post_id': self.post.id}),
             follow=True
         )

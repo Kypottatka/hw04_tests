@@ -54,8 +54,14 @@ class TaskCreateFormTests(TestCase):
             follow=True
         )
         self.assertEqual(self.user, self.post.author)
-        self.assertEqual(form_data['group'], self.post.group.id)
-        self.assertEqual(form_data['text'], self.post.text)
+        self.assertEqual(
+            form_data['group'],
+            Post.objects.get(pk=self.post.id).group.id
+        )
+        self.assertEqual(
+            form_data['text'],
+            Post.objects.get(pk=self.post.id).text
+        )
         self.assertRedirects(
             response,
             reverse('posts:profile',
@@ -67,17 +73,28 @@ class TaskCreateFormTests(TestCase):
     # Проверка редактирования поста
     def test_edit_post(self):
         form_data = {
-            'text': 'Тестовый текст',
+            'text': 'Отредактированный текст',
             'group': self.group.id,
         }
+        self.client.post(
+            reverse('posts:post_edit', kwargs={'post_id': self.post.id}),
+            data=form_data,
+            follow=True
+        )
         response = self.authorized_client.post(
             reverse('posts:post_edit', kwargs={'post_id': self.post.id}),
             data=form_data,
             follow=True
         )
         self.assertEqual(self.user, self.post.author)
-        self.assertEqual(form_data['group'], self.post.group.id)
-        self.assertEqual(form_data['text'], self.post.text)
+        self.assertEqual(
+            form_data['group'],
+            Post.objects.get(pk=self.post.id).group.id
+        )
+        self.assertEqual(
+            form_data['text'],
+            Post.objects.get(pk=self.post.id).text
+        )
         self.assertRedirects(
             response,
             reverse('posts:post_detail', kwargs={'post_id': self.post.id}))
