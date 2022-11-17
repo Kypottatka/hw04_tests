@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+from django.db.models import Max
 
 from posts.models import Group, Post
 
@@ -45,7 +46,7 @@ class TaskCreateFormTests(TestCase):
         '''Проверка создания нового поста'''
         posts_counter = Post.objects.count()
         form_data = {
-            'text': 'Тестовый текст',
+            'text': 'Текст нового поста',
             'group': self.group.id,
         }
         response = self.authorized_client.post(
@@ -53,14 +54,17 @@ class TaskCreateFormTests(TestCase):
             data=form_data,
             follow=True
         )
+        post = Post.objects.get(
+            pk=Post.objects.aggregate(Max('id')).get('id__max')
+        )
         self.assertEqual(self.user, self.post.author)
         self.assertEqual(
             form_data['group'],
-            Post.objects.get(pk=self.post.id).group.id
+            post.group.id
         )
         self.assertEqual(
             form_data['text'],
-            Post.objects.get(pk=self.post.id).text
+            post.text
         )
         self.assertRedirects(
             response,
@@ -86,14 +90,15 @@ class TaskCreateFormTests(TestCase):
             data=form_data,
             follow=True
         )
+        post = Post.objects.get(pk=self.post.id)
         self.assertEqual(self.user, self.post.author)
         self.assertEqual(
             form_data['group'],
-            Post.objects.get(pk=self.post.id).group.id
+            post.group.id
         )
         self.assertEqual(
             form_data['text'],
-            Post.objects.get(pk=self.post.id).text
+            post.text
         )
         self.assertRedirects(
             response,
