@@ -5,7 +5,6 @@ from django.contrib.auth import get_user_model
 from django.conf import settings
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
-from django.db.models import Max
 
 from posts.models import Group, Post
 
@@ -49,14 +48,14 @@ class TaskCreateFormTests(TestCase):
             'text': 'Текст нового поста',
             'group': self.group.id,
         }
+        posts_before = Post.objects.all()
         response = self.authorized_client.post(
             reverse('posts:post_create'),
             data=form_data,
             follow=True
         )
-        post = Post.objects.get(
-            pk=Post.objects.aggregate(Max('id')).get('id__max')
-        )
+        posts_after = Post.objects.all()
+        post = posts_before - posts_after
         self.assertEqual(self.user, self.post.author)
         self.assertEqual(
             form_data['group'],
@@ -80,11 +79,6 @@ class TaskCreateFormTests(TestCase):
             'text': 'Отредактированный текст',
             'group': self.group.id,
         }
-        self.client.post(
-            reverse('posts:post_edit', kwargs={'post_id': self.post.id}),
-            data=form_data,
-            follow=True
-        )
         response = self.authorized_client.post(
             reverse('posts:post_edit', kwargs={'post_id': self.post.id}),
             data=form_data,

@@ -88,8 +88,7 @@ class PostPagesTests(TestCase):
             kwargs={'post_id': self.post.id},
         )
         response = self.authorized_client.get(url)
-        form = PostForm(instance=self.post)
-        self.assertEqual(form.instance, self.post)
+        self.assertEqual(response.context['form'].instance, self.post)
         self.assertIsInstance(response.context['form'], PostForm)
 
     def test_author_page_show_correct_context(self):
