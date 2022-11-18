@@ -48,14 +48,14 @@ class TaskCreateFormTests(TestCase):
             'text': 'Текст нового поста',
             'group': self.group.id,
         }
-        posts_before = Post.objects.all()
+        posts_before = set(Post.objects.all())
         response = self.authorized_client.post(
             reverse('posts:post_create'),
             data=form_data,
             follow=True
         )
-        posts_after = Post.objects.all()
-        post = posts_before - posts_after
+        posts_set = set(Post.objects.all()) - posts_before
+        post = posts_set.pop()
         self.assertEqual(self.user, self.post.author)
         self.assertEqual(
             form_data['group'],
