@@ -43,19 +43,22 @@ class TaskCreateFormTests(TestCase):
     # Проверка создания поста
     def test_create_post(self):
         '''Проверка создания нового поста'''
-        posts_counter = Post.objects.count()
         form_data = {
             'text': 'Текст нового поста',
             'group': self.group.id,
         }
-        posts_before = set(Post.objects.all())
+        posts_before = set(Post.objects.values_list('id', 'text'))
         response = self.authorized_client.post(
             reverse('posts:post_create'),
             data=form_data,
             follow=True
         )
-        posts_set = set(Post.objects.all()) - posts_before
-        post = posts_set.pop()
+        posts_set = set(
+            Post.objects.values_list('id', 'text')
+        ) - posts_before
+        post_tuple = posts_set.pop()
+        id, text = post_tuple
+        post = Post.objects.get(id=id)
         self.assertEqual(self.user, self.post.author)
         self.assertEqual(
             form_data['group'],
@@ -63,7 +66,7 @@ class TaskCreateFormTests(TestCase):
         )
         self.assertEqual(
             form_data['text'],
-            post.text
+            text
         )
         self.assertRedirects(
             response,
@@ -71,7 +74,7 @@ class TaskCreateFormTests(TestCase):
                     kwargs={'username': self.user.username}
                     )
         )
-        self.assertEqual(Post.objects.count(), posts_counter + 1)
+        self.assertEqual(Post.objects.count(), len(posts_before) + 1)
 
     # Проверка редактирования поста
     def test_edit_post(self):
