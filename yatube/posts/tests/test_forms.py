@@ -47,18 +47,17 @@ class TaskCreateFormTests(TestCase):
             'text': 'Текст нового поста',
             'group': self.group.id,
         }
-        posts_before = set(Post.objects.values_list('id', 'text'))
+        posts_before = set(Post.objects.values_list('id', flat=True))
         response = self.authorized_client.post(
             reverse('posts:post_create'),
             data=form_data,
             follow=True
         )
         posts_set = set(
-            Post.objects.values_list('id', 'text')
+            Post.objects.values_list('id', flat=True)
         ) - posts_before
         post_tuple = posts_set.pop()
-        id, text = post_tuple
-        post = Post.objects.get(id=id)
+        post = Post.objects.get(id=post_tuple)
         self.assertEqual(self.user, self.post.author)
         self.assertEqual(
             form_data['group'],
@@ -66,7 +65,7 @@ class TaskCreateFormTests(TestCase):
         )
         self.assertEqual(
             form_data['text'],
-            text
+            post.text
         )
         self.assertRedirects(
             response,
